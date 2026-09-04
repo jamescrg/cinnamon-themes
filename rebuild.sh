@@ -43,9 +43,13 @@ notify() { command -v notify-send >/dev/null 2>&1 && notify-send -u "${3:-normal
 entries() { grep -Ev '^[[:space:]]*(#|$)' "$CONF" | tr -d '\r' | awk -v s="$SUFFIX" '{ print $1, ($2 != "" ? $2 : $1 s) }'; }
 ancestors() { entries | awk '{ print $1 }'; }
 tree_hash() { (cd "$1" && find . -type f -print0 | sort -z | xargs -0 sha256sum) | sha256sum | cut -d' ' -f1; }
+# Hash contents only: "sha256sum FILE" prints the path beside the hash, which
+# would make the stamp depend on how this script was invoked (./rebuild.sh vs
+# an absolute path), forcing a needless full rebuild every time.
+file_hash() { sha256sum < "$1" | cut -d' ' -f1; }
 stamp() {
-  { tree_hash "$STOCK/$1"; sha256sum "$PATCH" "$0" "$HERE/recolor-png.py"
-    for f in "$HERE/common.sed" "$HERE/$2.sed" "$HERE/$2.recolor"; do [ -f "$f" ] && sha256sum "$f"; done; true
+  { tree_hash "$STOCK/$1"; file_hash "$PATCH"; file_hash "$0"; file_hash "$HERE/recolor-png.py"
+    for f in "$HERE/common.sed" "$HERE/$2.sed" "$HERE/$2.recolor"; do [ -f "$f" ] && file_hash "$f"; done; true
   } | sha256sum | cut -d' ' -f1
 }
 all_hash() { for A in $(ancestors); do [ -d "$STOCK/$A" ] && tree_hash "$STOCK/$A"; done | sha256sum; }
