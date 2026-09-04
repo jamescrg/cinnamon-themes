@@ -1,0 +1,13 @@
+--- a/cinnamon/cinnamon.css
++++ b/cinnamon/cinnamon.css
+@@ -1198,2 +1198,5 @@
+ 
++.grouped-window-list-box {
++  spacing: 12px; }
++
+ .grouped-window-list-item-box {
+@@ -1205,2 +1208,4 @@
+   padding-right: 8px;
++  margin-left: 2px;
++  margin-right: 2px;
+   transition-duration: 100;
