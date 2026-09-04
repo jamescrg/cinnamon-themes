@@ -24,6 +24,16 @@ Do not edit the generated themes by hand; edit `cinnamon.patch` and run
 Generated themes are complete: select the same name under both Desktop and
 Applications in System Settings > Themes.
 
+Flatpak applications are a special case. A sandbox sees only its runtime's
+`/usr/share/themes` plus any `org.gtk.Gtk3theme.<name>` extension from
+flathub, and no such extension exists for a locally generated theme, so GTK
+falls back to Adwaita without warning and the app keeps Adwaita's blue accent
+(`#3584e4`). `install.sh` grants every flatpak read-only access to the themes
+directory (`flatpak override --user --filesystem=~/.themes:ro`), which fixes
+it; running flatpak apps must be restarted to pick the theme up. Host icon
+themes need no equivalent — flatpak already exposes them under
+`/run/host/share/icons`.
+
 After a rebuild of the GTK theme you are using, running applications and
 Muffin's window title bars keep the old stylesheet until they restart (GTK 3
 caches a theme by name for the life of a process). The script sends a

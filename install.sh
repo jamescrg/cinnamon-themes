@@ -4,6 +4,7 @@
 #   git clone <remote> ~/.themes/.custom-themes && ~/.themes/.custom-themes/install.sh
 set -euo pipefail
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+THEMES_DIR="$(dirname "$HERE")"
 
 case "$HERE" in
   "$HOME/.themes/"*) ;;
@@ -19,6 +20,26 @@ done
 
 "$HERE/rebuild.sh" --force
 "$HERE/rebuild.sh" --install-units
+
+# Flatpak apps cannot see ~/.themes: the sandbox exposes only its runtime's
+# /usr/share/themes plus any org.gtk.Gtk3theme.<name> extension from flathub,
+# and no such extension exists for a locally generated theme. GTK then falls
+# back to Adwaita silently, so a flatpak app keeps Adwaita's blue accent while
+# every host app follows the custom theme. A read-only bind of the themes
+# directory fixes it for all flatpaks. (Host icon themes are already visible
+# via /run/host/share/icons, so only themes need this.)
+if command -v flatpak >/dev/null 2>&1; then
+  case "$THEMES_DIR" in
+    "$HOME"/*) fs="~/${THEMES_DIR#"$HOME"/}" ;;
+    *) fs="$THEMES_DIR" ;;
+  esac
+  if flatpak override --user "--filesystem=$fs:ro" 2>/dev/null; then
+    echo "flatpak: granted read-only access to $fs for all applications"
+    echo "         (running flatpak apps must be restarted to pick up the theme)"
+  else
+    echo "warning: could not set the flatpak override; flatpak apps will use Adwaita" >&2
+  fi
+fi
 
 echo
 echo "Custom themes built. Select one under System Settings > Themes > Desktop, or run e.g.:"
