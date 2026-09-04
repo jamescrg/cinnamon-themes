@@ -6,11 +6,17 @@ Each `~/.themes/<Ancestor>-Custom` is generated: a fresh copy of
 Do not edit the generated themes by hand; edit `cinnamon.patch` and run
 `./rebuild.sh --force`.
 
-* `themes.conf` – which stock themes to derive from
+* `themes.conf` – which stock themes to derive from, one `<ancestor> [<name>]`
+  per line; the name defaults to `<ancestor>-Custom`
 * `cinnamon.patch` – darker panel (#c3c3c6) and grouped-window-list spacing
-* `<Ancestor>.sed` – optional per-theme colour substitutions applied to
-  `cinnamon/cinnamon.css` after the patch (e.g. `Mint-Y-Purple.sed` darkens
-  the purple accent)
+* `<name>.sed` – optional per-theme colour substitutions applied to the
+  Cinnamon stylesheet and SVG assets after the patch. `Mint-Y-Purple-Custom.sed`
+  darkens the purple accent; `Mint-Y-Matcha.sed` turns stock Mint-Y's green
+  into Tailwind lime anchored at lime-700
+
+Note that only the Cinnamon desktop theme is recoloured. The GTK application
+theme inside each generated directory is the stock one; for Mint-Y-Matcha
+pair it with stock Mint-Y (or any Mint-Y variant) under Applications.
 * `rebuild.sh` – see `./rebuild.sh --help`
 * `previous/` – the previous build of each theme, kept until the next rebuild
 * `rebuild.log` – what happened and when

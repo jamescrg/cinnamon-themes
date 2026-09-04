@@ -1,4 +1,4 @@
-# Per-theme colour substitutions, applied to cinnamon/cinnamon.css after
+# Per-theme colour substitutions, applied to the Cinnamon stylesheet and SVGs after
 # cinnamon.patch. Darkens the Mint-Y-Purple accent by roughly 10%.
 s/#8c5dd9/#7e54c3/g
 s/rgba(140, 93, 217,/rgba(126, 84, 195,/g

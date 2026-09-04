@@ -34,9 +34,11 @@ done
 
 log() { printf '%s %s\n' "$(date '+%F %T')" "$*" | tee -a "$LOG" >&2; }
 notify() { command -v notify-send >/dev/null 2>&1 && notify-send -u "${3:-normal}" -a "Custom themes" "$1" "$2" 2>/dev/null || true; }
-ancestors() { grep -Ev '^[[:space:]]*(#|$)' "$CONF" | tr -d ' \t\r'; }
+# themes.conf lines are "<ancestor> [<output name>]"; the name defaults to <ancestor>-Custom.
+entries() { grep -Ev '^[[:space:]]*(#|$)' "$CONF" | tr -d '\r' | awk -v s="$SUFFIX" '{ print $1, ($2 != "" ? $2 : $1 s) }'; }
+ancestors() { entries | awk '{ print $1 }'; }
 tree_hash() { (cd "$1" && find . -type f -print0 | sort -z | xargs -0 sha256sum) | sha256sum | cut -d' ' -f1; }
-stamp() { { tree_hash "$STOCK/$1"; sha256sum "$PATCH" "$0"; if [ -f "$HERE/$1.sed" ]; then sha256sum "$HERE/$1.sed"; fi; } | sha256sum | cut -d' ' -f1; }
+stamp() { { tree_hash "$STOCK/$1"; sha256sum "$PATCH" "$0"; if [ -f "$HERE/$2.sed" ]; then sha256sum "$HERE/$2.sed"; fi; } | sha256sum | cut -d' ' -f1; }
 all_hash() { for A in $(ancestors); do [ -d "$STOCK/$A" ] && tree_hash "$STOCK/$A"; done | sha256sum; }
 
 install_units() {
@@ -91,12 +93,12 @@ fi
 
 mkdir -p "$STATE" "$HERE/build" "$HERE/previous"
 rebuilt=() failed=() stale=0
-for A in $(ancestors); do
-  name="$A$SUFFIX"; src="$STOCK/$A"; dest="$THEMES_DIR/$name"
+while read -r A name; do
+  src="$STOCK/$A"; dest="$THEMES_DIR/$name"
   if [ ! -d "$src" ]; then
     log "$name: ancestor $src does not exist, skipping"; failed+=("$name"); continue
   fi
-  want=$(stamp "$A"); have=$(cat "$STATE/$A" 2>/dev/null || echo none)
+  want=$(stamp "$A" "$name"); have=$(cat "$STATE/$name" 2>/dev/null || echo none)
   if [ "$want" = "$have" ] && [ "$FORCE" = 0 ] && [ -d "$dest" ]; then
     [ "$CHECK" = 1 ] && echo "$name: up to date"
     continue
@@ -112,19 +114,20 @@ for A in $(ancestors); do
     failed+=("$name"); rm -rf "$build"; continue
   fi
   patch -p1 -F0 --no-backup-if-mismatch -d "$build" < "$PATCH" >>"$LOG" 2>&1
-  if [ -f "$HERE/$A.sed" ]; then
-    sed -i -f "$HERE/$A.sed" "$build/cinnamon/cinnamon.css"
-    log "$name: applied colour substitutions from $A.sed"
+  if [ -f "$HERE/$name.sed" ]; then
+    # Colour substitutions apply to the Cinnamon stylesheet and its SVG assets.
+    find "$build/cinnamon" -type f \( -name '*.css' -o -name '*.svg' \) -exec sed -i -f "$HERE/$name.sed" {} +
+    log "$name: applied colour substitutions from $name.sed"
   fi
   sed -i "s/^Name=.*/Name=$name/" "$build/index.theme"
 
   prev="$HERE/previous/$name"; rm -rf "$prev"
   [ -e "$dest" ] && mv "$dest" "$prev"
   mv "$build" "$dest"
-  echo "$want" > "$STATE/$A"
+  echo "$want" > "$STATE/$name"
   log "$name: rebuilt from $src ($(dpkg-query -W -f='mint-themes ${Version}' mint-themes 2>/dev/null || echo 'unknown version'))"
   rebuilt+=("$name")
-done
+done < <(entries)
 
 if [ "$CHECK" = 1 ]; then exit "$stale"; fi
 
