@@ -120,7 +120,7 @@ while read -r A name; do
   patch -p1 -F0 --no-backup-if-mismatch -d "$build" < "$PATCH" >>"$LOG" 2>&1
   if [ -f "$HERE/$name.sed" ]; then
     # Colour substitutions apply to every stylesheet, rc file and SVG in the theme.
-    find "$build" -type f \( -name '*.css' -o -name '*.svg' -o -name '*.rc' -o -name gtkrc -o -name themerc \) \
+    find "$build" -type f \( -name '*.css' -o -name '*.svg' -o -name '*.xml' -o -name '*.rc' -o -name gtkrc -o -name themerc \) \
       -exec sed -i -f "$HERE/$name.sed" {} +
     log "$name: applied colour substitutions from $name.sed"
   fi
