@@ -40,7 +40,7 @@ ancestors() { entries | awk '{ print $1 }'; }
 tree_hash() { (cd "$1" && find . -type f -print0 | sort -z | xargs -0 sha256sum) | sha256sum | cut -d' ' -f1; }
 stamp() {
   { tree_hash "$STOCK/$1"; sha256sum "$PATCH" "$0" "$HERE/recolor-png.py"
-    for f in "$HERE/$2.sed" "$HERE/$2.recolor"; do [ -f "$f" ] && sha256sum "$f"; done; true
+    for f in "$HERE/common.sed" "$HERE/$2.sed" "$HERE/$2.recolor"; do [ -f "$f" ] && sha256sum "$f"; done; true
   } | sha256sum | cut -d' ' -f1
 }
 all_hash() { for A in $(ancestors); do [ -d "$STOCK/$A" ] && tree_hash "$STOCK/$A"; done | sha256sum; }
@@ -118,12 +118,14 @@ while read -r A name; do
     failed+=("$name"); rm -rf "$build"; continue
   fi
   patch -p1 -F0 --no-backup-if-mismatch -d "$build" < "$PATCH" >>"$LOG" 2>&1
-  if [ -f "$HERE/$name.sed" ]; then
-    # Colour substitutions apply to every stylesheet, rc file and SVG in the theme.
+  # Colour substitutions apply to every stylesheet, rc file, SVG and XML in the
+  # theme: common.sed for all themes first, then the per-theme file.
+  for sedfile in "$HERE/common.sed" "$HERE/$name.sed"; do
+    [ -f "$sedfile" ] || continue
     find "$build" -type f \( -name '*.css' -o -name '*.svg' -o -name '*.xml' -o -name '*.rc' -o -name gtkrc -o -name themerc \) \
-      -exec sed -i -f "$HERE/$name.sed" {} +
-    log "$name: applied colour substitutions from $name.sed"
-  fi
+      -exec sed -i -f "$sedfile" {} +
+    log "$name: applied colour substitutions from $(basename "$sedfile")"
+  done
   if [ -f "$HERE/$name.recolor" ]; then
     # PNG assets (checkboxes, switches, thumbnails...) get their accent pixels remapped.
     mapargs=()

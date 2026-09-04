@@ -9,6 +9,8 @@ Do not edit the generated themes by hand; edit `cinnamon.patch` and run
 * `themes.conf` – which stock themes to derive from, one `<ancestor> [<name>]`
   per line; the name defaults to `<ancestor>-Custom`
 * `cinnamon.patch` – darker panel (#c3c3c6) and grouped-window-list spacing
+* `common.sed` – colour substitutions applied to every theme (darkens the
+  light grey surfaces by 16 points), run before the per-theme file
 * `<name>.sed` – optional per-theme colour substitutions applied to every
   stylesheet, rc file and SVG in the theme (Cinnamon, GTK 2/3/4, libadwaita,
   xfwm4, openbox) after the patch. `Mint-Y-Purple-Custom.sed` darkens the
