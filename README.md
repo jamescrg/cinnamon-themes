@@ -23,6 +23,12 @@ Do not edit the generated themes by hand; edit `cinnamon.patch` and run
 
 Generated themes are complete: select the same name under both Desktop and
 Applications in System Settings > Themes.
+
+After a rebuild of the GTK theme you are using, running applications and
+Muffin's window title bars keep the old stylesheet until they restart (GTK 3
+caches a theme by name for the life of a process). The script sends a
+notification when this applies; press Ctrl+Alt+Esc to restart Cinnamon, or run
+`./rebuild.sh --restart-cinnamon` to have the script do it.
 * `rebuild.sh` – see `./rebuild.sh --help`
 * `previous/` – the previous build of each theme, kept until the next rebuild
 * `rebuild.log` – what happened and when

@@ -8,6 +8,10 @@
 #   rebuild.sh --settle        wait for /usr/share/themes to stop changing first
 #                              (used by the systemd service during apt upgrades)
 #   rebuild.sh --install-units (re)generate and enable the systemd user units
+#   rebuild.sh --restart-cinnamon
+#                              after rebuilding, restart Cinnamon if the active
+#                              GTK theme changed (Muffin caches a theme's CSS
+#                              until restart, so window title bars go stale)
 set -euo pipefail
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -20,14 +24,15 @@ LOG="$HERE/rebuild.log"
 SUFFIX="-Custom"
 UNIT_DIR="$HOME/.config/systemd/user"
 
-FORCE=0 SETTLE=0 CHECK=0 INSTALL=0
+FORCE=0 SETTLE=0 CHECK=0 INSTALL=0 RESTART=0
 for a in "$@"; do
   case "$a" in
     --force) FORCE=1 ;;
     --settle) SETTLE=1 ;;
     --check) CHECK=1 ;;
     --install-units) INSTALL=1 ;;
-    -h|--help) sed -n '2,12p' "$0"; exit 0 ;;
+    --restart-cinnamon) RESTART=1 ;;
+    -h|--help) sed -n '2,16p' "$0"; exit 0 ;;
     *) echo "unknown argument: $a" >&2; exit 2 ;;
   esac
 done
@@ -158,5 +163,20 @@ if [ ${#rebuilt[@]} -gt 0 ]; then
     fi
   done
   notify "Custom themes updated" "$(printf '%s ' "${rebuilt[@]}")"
+
+  # Muffin draws window title bars from the GTK theme but caches its CSS for
+  # the life of the Cinnamon process, so a rebuilt active GTK theme needs a
+  # Cinnamon restart before title bars match the applications.
+  gtk_current=$(gsettings get org.cinnamon.desktop.interface gtk-theme 2>/dev/null | tr -d "'" || true)
+  for n in "${rebuilt[@]}"; do
+    if [ "$n" = "$gtk_current" ] && [ -n "${DISPLAY:-}" ]; then
+      if [ "$RESTART" = 1 ]; then
+        log "restarting Cinnamon so title bars pick up $gtk_current"
+        setsid nohup cinnamon --replace >/dev/null 2>&1 < /dev/null &
+      else
+        notify "Restart Cinnamon to refresh title bars" "Press Ctrl+Alt+Esc (or run rebuild.sh --restart-cinnamon) so window title bars pick up the rebuilt $gtk_current."
+      fi
+    fi
+  done
 fi
 [ ${#failed[@]} -eq 0 ]
