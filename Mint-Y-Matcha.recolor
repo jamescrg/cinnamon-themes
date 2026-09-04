@@ -1,0 +1,4 @@
+# PNG pixel recolouring for Mint-Y-Matcha, one "<from> <to>" per line.
+# Pixels near the source hue are moved to the target hue with lightness and
+# saturation remapped relative to these anchors (see recolor-png.py).
+#35a854 #4d7c0f

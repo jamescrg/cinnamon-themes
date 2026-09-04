@@ -38,7 +38,11 @@ notify() { command -v notify-send >/dev/null 2>&1 && notify-send -u "${3:-normal
 entries() { grep -Ev '^[[:space:]]*(#|$)' "$CONF" | tr -d '\r' | awk -v s="$SUFFIX" '{ print $1, ($2 != "" ? $2 : $1 s) }'; }
 ancestors() { entries | awk '{ print $1 }'; }
 tree_hash() { (cd "$1" && find . -type f -print0 | sort -z | xargs -0 sha256sum) | sha256sum | cut -d' ' -f1; }
-stamp() { { tree_hash "$STOCK/$1"; sha256sum "$PATCH" "$0"; if [ -f "$HERE/$2.sed" ]; then sha256sum "$HERE/$2.sed"; fi; } | sha256sum | cut -d' ' -f1; }
+stamp() {
+  { tree_hash "$STOCK/$1"; sha256sum "$PATCH" "$0" "$HERE/recolor-png.py"
+    for f in "$HERE/$2.sed" "$HERE/$2.recolor"; do [ -f "$f" ] && sha256sum "$f"; done; true
+  } | sha256sum | cut -d' ' -f1
+}
 all_hash() { for A in $(ancestors); do [ -d "$STOCK/$A" ] && tree_hash "$STOCK/$A"; done | sha256sum; }
 
 install_units() {
@@ -115,11 +119,23 @@ while read -r A name; do
   fi
   patch -p1 -F0 --no-backup-if-mismatch -d "$build" < "$PATCH" >>"$LOG" 2>&1
   if [ -f "$HERE/$name.sed" ]; then
-    # Colour substitutions apply to the Cinnamon stylesheet and its SVG assets.
-    find "$build/cinnamon" -type f \( -name '*.css' -o -name '*.svg' \) -exec sed -i -f "$HERE/$name.sed" {} +
+    # Colour substitutions apply to every stylesheet, rc file and SVG in the theme.
+    find "$build" -type f \( -name '*.css' -o -name '*.svg' -o -name '*.rc' -o -name gtkrc -o -name themerc \) \
+      -exec sed -i -f "$HERE/$name.sed" {} +
     log "$name: applied colour substitutions from $name.sed"
   fi
-  sed -i "s/^Name=.*/Name=$name/" "$build/index.theme"
+  if [ -f "$HERE/$name.recolor" ]; then
+    # PNG assets (checkboxes, switches, thumbnails...) get their accent pixels remapped.
+    mapargs=()
+    while read -r from to; do
+      [[ "$from" =~ ^#[0-9a-fA-F]{6}$ && "$to" =~ ^#[0-9a-fA-F]{6}$ ]] && mapargs+=(-m "$from $to")
+    done < <(grep -Ev '^[[:space:]]*(#[^0-9a-fA-F]|#$|$)' "$HERE/$name.recolor")
+    if [ ${#mapargs[@]} -gt 0 ]; then
+      find "$build" -type f -name '*.png' -print0 | xargs -0 python3 "$HERE/recolor-png.py" "${mapargs[@]}" >>"$LOG" 2>&1
+      log "$name: recoloured PNG assets per $name.recolor"
+    fi
+  fi
+  sed -i "s/^Name=.*/Name=$name/; s/^GtkTheme=.*/GtkTheme=$name/" "$build/index.theme"
 
   prev="$HERE/previous/$name"; rm -rf "$prev"
   [ -e "$dest" ] && mv "$dest" "$prev"

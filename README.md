@@ -9,14 +9,18 @@ Do not edit the generated themes by hand; edit `cinnamon.patch` and run
 * `themes.conf` – which stock themes to derive from, one `<ancestor> [<name>]`
   per line; the name defaults to `<ancestor>-Custom`
 * `cinnamon.patch` – darker panel (#c3c3c6) and grouped-window-list spacing
-* `<name>.sed` – optional per-theme colour substitutions applied to the
-  Cinnamon stylesheet and SVG assets after the patch. `Mint-Y-Purple-Custom.sed`
-  darkens the purple accent; `Mint-Y-Matcha.sed` turns stock Mint-Y's green
-  into Tailwind lime anchored at lime-700
+* `<name>.sed` – optional per-theme colour substitutions applied to every
+  stylesheet, rc file and SVG in the theme (Cinnamon, GTK 2/3/4, libadwaita,
+  xfwm4, openbox) after the patch. `Mint-Y-Purple-Custom.sed` darkens the
+  purple accent; `Mint-Y-Matcha.sed` maps stock Mint-Y's green shades onto
+  Tailwind's lime series anchored at lime-700
+* `<name>.recolor` – optional `"#from #to"` pairs; `recolor-png.py` (Pillow)
+  remaps accent-hued pixels in every PNG asset (checkboxes, radios, switches,
+  window buttons, thumbnails) so the image assets match the CSS
+* `recolor-png.py` – the PNG recolouring tool; needs `python3-pil`
 
-Note that only the Cinnamon desktop theme is recoloured. The GTK application
-theme inside each generated directory is the stock one; for Mint-Y-Matcha
-pair it with stock Mint-Y (or any Mint-Y variant) under Applications.
+Generated themes are complete: select the same name under both Desktop and
+Applications in System Settings > Themes.
 * `rebuild.sh` – see `./rebuild.sh --help`
 * `previous/` – the previous build of each theme, kept until the next rebuild
 * `rebuild.log` – what happened and when
