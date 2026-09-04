@@ -30,8 +30,8 @@ s/#f3f3f5/#e3e3e5/gI
 s/#f3f3f3/#e3e3e3/gI
 
 # White content surfaces (text views, lists, entries, cards, popovers) move to
-# a quarter of the way from Tailwind stone-100 to stone-200 (#f1f1f0). Only background uses are touched: white as a
+# Tailwind stone-100 (#f5f5f4). Only background uses are touched: white as a
 # text/icon colour on accents, and translucent white overlays, stay white.
-s/background-color: #ffffff/background-color: #f1f1f0/gI
-s/\(@define-color \(theme_base_color\|base_color\|insensitive_base_color\|theme_unfocused_base_color\|content_view_bg\|view_bg_color\|card_bg_color\|popover_bg_color\)\) #ffffff/\1 #f1f1f0/I
-s/\(base_color:\)#ffffff/\1#f1f1f0/gI
+s/background-color: #ffffff/background-color: #f5f5f4/gI
+s/\(@define-color \(theme_base_color\|base_color\|insensitive_base_color\|theme_unfocused_base_color\|content_view_bg\|view_bg_color\|card_bg_color\|popover_bg_color\)\) #ffffff/\1 #f5f5f4/I
+s/\(base_color:\)#ffffff/\1#f5f5f4/gI
