@@ -1,0 +1,6 @@
+# per-machine generated state
+state/
+build/
+previous/
+rebuild.log
+backup-*.tar.gz
