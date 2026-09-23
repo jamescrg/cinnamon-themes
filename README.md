@@ -8,7 +8,10 @@ Do not edit the generated themes by hand; edit `cinnamon.patch` and run
 
 * `themes.conf` – which stock themes to derive from, one `<ancestor> [<name>]`
   per line; the name defaults to `<ancestor>-Custom`
-* `cinnamon.patch` – darker panel (#c3c3c6) and grouped-window-list spacing
+* `cinnamon.patch` – darker panel (#c3c3c6), grouped-window-list spacing, and
+  the current workspace filled with the accent in the panel workspace switcher.
+  The patch is shared, so it writes the accent as `@ACCENT@` / `@ACCENT_HOVER@`;
+  `rebuild.sh` fills them from each theme's recoloured accent (hover is 85%)
 * `common.sed` – colour substitutions applied to every theme (darkens the
   light grey surfaces by 16 points), run before the per-theme file
 * `<name>.sed` – optional per-theme colour substitutions applied to every

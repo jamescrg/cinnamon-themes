@@ -46,3 +46,26 @@
    transition-duration: 100;
    color: rgba(48, 48, 48, 0.8); }
    .grouped-window-list-item-box.top, .grouped-window-list-item-box.bottom {
+@@ -1402,14 +1407,19 @@
+   .workspace-button.vertical {
+     height: 2em; }
+   .workspace-button:outlined {
+-    background-color: #d3d3d7;
+-    color: #303030; }
++    background-color: @ACCENT@;
++    border-color: @ACCENT@;
++    color: #ffffff; }
+     .workspace-button:outlined:hover {
+-      background-color: #b0b0b8; }
++      background-color: @ACCENT_HOVER@; }
+   .workspace-button:hover {
+     background-color: #d3d3d7; }
+   .workspace-button:shaded {
+     background-color: #dedee1; }
++  .workspace-button:outlined:shaded {
++    background-color: @ACCENT@; }
++    .workspace-button:outlined:shaded:hover {
++      background-color: @ACCENT_HOVER@; }
+ 
+ .workspace-graph {
+   padding: 4px;

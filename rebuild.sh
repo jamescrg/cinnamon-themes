@@ -52,6 +52,8 @@ stamp() {
     for f in "$HERE/common.sed" "$HERE/$2.sed" "$HERE/$2.recolor"; do [ -f "$f" ] && file_hash "$f"; done; true
   } | sha256sum | cut -d' ' -f1
 }
+# "#rrggbb" scaled to 85% brightness, for hover states.
+darken() { local h=${1#\#}; printf '#%02x%02x%02x' $(( (16#${h:0:2} * 85 + 50) / 100 )) $(( (16#${h:2:2} * 85 + 50) / 100 )) $(( (16#${h:4:2} * 85 + 50) / 100 )); }
 all_hash() { for A in $(ancestors); do [ -d "$STOCK/$A" ] && tree_hash "$STOCK/$A"; done | sha256sum; }
 
 install_units() {
@@ -135,6 +137,17 @@ while read -r A name; do
       -exec sed -i -f "$sedfile" {} +
     log "$name: applied colour substitutions from $(basename "$sedfile")"
   done
+  # cinnamon.patch is shared by every theme, so it writes the accent as
+  # @ACCENT@ / @ACCENT_HOVER@. Fill them from the theme's own (recoloured)
+  # accent, taken from the workspace-graph highlight.
+  css="$build/cinnamon/cinnamon.css"
+  accent=$(grep -A1 '\.workspace-graph \.workspace:active {' "$css" | grep -oiE '#[0-9a-f]{6}' | head -1 || true)
+  if [ -z "$accent" ]; then
+    log "$name: could not find the accent colour in $css; existing theme left untouched"
+    notify "Custom theme NOT updated" "$name: no accent colour found for cinnamon.patch placeholders. See $LOG" critical
+    failed+=("$name"); rm -rf "$build"; continue
+  fi
+  sed -i "s/@ACCENT_HOVER@/$(darken "$accent")/g; s/@ACCENT@/$accent/g" "$css"
   if [ -f "$HERE/$name.recolor" ]; then
     # PNG assets (checkboxes, switches, thumbnails...) get their accent pixels remapped.
     mapargs=()
