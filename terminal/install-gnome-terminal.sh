@@ -18,8 +18,11 @@ if [ "${1:-}" = "--uuid" ]; then echo "$uuid"; exit 0; fi
 if [ -z "$uuid" ]; then
   uuid=$(uuidgen)
   default=$(gsettings get org.gnome.Terminal.ProfilesList default | tr -d "'")
-  # clone everything but the colours from the default profile
-  dconf dump "$BASE/:$default/" | grep -vE '^(visible-name|palette|background-color|foreground-color|bold-color|cursor-.*color|highlight-.*color|use-theme-colors|use-theme-background|use-theme-transparency|cursor-colors-set|highlight-colors-set|bold-color-same-as-fg)=' \
+  # Clone everything but the colours from the default profile. Transparency
+  # counts as a colour setting: inheriting it would composite the paper
+  # background over the wallpaper, so the profile reads darker than the
+  # palette says, and differently on each machine.
+  dconf dump "$BASE/:$default/" | grep -vE '^(visible-name|palette|background-color|foreground-color|bold-color|cursor-.*color|highlight-.*color|use-theme-colors|use-theme-background|use-theme-transparency|use-transparent-background|background-transparency-percent|cursor-colors-set|highlight-colors-set|bold-color-same-as-fg)=' \
     | dconf load "$BASE/:$uuid/"
   gsettings set org.gnome.Terminal.ProfilesList list "$(echo "$list" | sed "s/]$/, '$uuid']/; s/^\[, /[/")"
   echo "created profile $NAME ($uuid)"
