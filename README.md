@@ -22,7 +22,30 @@ Do not edit the generated themes by hand; edit `cinnamon.patch` and run
 * `<name>.recolor` – optional `"#from #to"` pairs; `recolor-png.py` (Pillow)
   remaps accent-hued pixels in every PNG asset (checkboxes, radios, switches,
   window buttons, thumbnails) so the image assets match the CSS
+  A third word `exact` on a line selects exact mode, for accents too grey for
+  hue matching: pixels that are a blend of the source with any neutral grey
+  become the same blend of the target, and a neutral source retints neutral
+  pixels of its lightness
 * `recolor-png.py` – the PNG recolouring tool; needs `python3-pil`
+* `paper-palette.py` – generates `Mint-Y-Paper.sed` and `Mint-Y-Paper.recolor`
+  from the built `Mint-Y-Grey-Custom` tree: the palette of jamescraig.dev
+  (paper #f2f0ea, ink #3c3836, faded-aqua accent #427b58, tan borders). Every
+  grey keeps its lightness and takes the paper's warmth; Mint-Y-Grey's grey
+  accent ramp (which mirrors stock Mint-Y's green ramp shade for shade) becomes
+  the aqua ramp. `--strength` sets how tan the greys get (0.6 by default, 1.0 is
+  gruvbox's own chroma), `--chrome-strength` the same for title bars, header
+  bars, sidebars and the Cinnamon menu (0.45), `--panel-strength` for the
+  Cinnamon panel alone (0.3), and `--base` the content surfaces (text views, lists, Nemo's file
+  area; the blog's subtle shade #edebe5 by default, #f2f0ea is its paper).
+  Regenerate after changing `surfaces.sed`, a dial or the stock theme, then
+  `./rebuild.sh`:
+
+      ./paper-palette.py ../Mint-Y-Grey-Custom --sed Mint-Y-Paper.sed --recolor Mint-Y-Paper.recolor
+
+* `terminal/` – the matching GNOME Terminal colours (`mint-y-paper.dconf`,
+  gruvbox light on the theme's surfaces) and `install-gnome-terminal.sh`, which
+  creates or refreshes a "Mint-Y-Paper" profile cloned from your default one
+  without changing the default
 
 Generated themes are complete: select the same name under both Desktop and
 Applications in System Settings > Themes.

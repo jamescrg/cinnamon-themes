@@ -153,9 +153,11 @@ while read -r A name steps; do
   fi
   if [ -f "$HERE/$name.recolor" ]; then
     # PNG assets (checkboxes, switches, thumbnails...) get their accent pixels remapped.
+    # Each line is "<from> <to>" (hue mode) or "<from> <to> exact" (exact mode).
     mapargs=()
-    while read -r from to; do
-      [[ "$from" =~ ^#[0-9a-fA-F]{6}$ && "$to" =~ ^#[0-9a-fA-F]{6}$ ]] && mapargs+=(-m "$from $to")
+    while read -r from to mode; do
+      [[ "$from" =~ ^#[0-9a-fA-F]{6}$ && "$to" =~ ^#[0-9a-fA-F]{6}$ ]] || continue
+      case "$mode" in exact) mapargs+=(-e "$from $to") ;; *) mapargs+=(-m "$from $to") ;; esac
     done < <(grep -Ev '^[[:space:]]*(#[^0-9a-fA-F]|#$|$)' "$HERE/$name.recolor")
     if [ ${#mapargs[@]} -gt 0 ]; then
       find "$build" -type f -name '*.png' -print0 | xargs -0 python3 "$HERE/recolor-png.py" "${mapargs[@]}" >>"$LOG" 2>&1
