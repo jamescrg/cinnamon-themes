@@ -1,5 +1,5 @@
 --- a/cinnamon/cinnamon.css
-+++ b/cinnamon/cinnamon.css
++++ p/cinnamon/cinnamon.css
 @@ -417,21 +417,21 @@
  .panel-top, .panel-bottom, .panel-left, .panel-right {
    color: #ffffff;
@@ -27,26 +27,7 @@
  
  .panel-dummy {
    background-color: rgba(252, 65, 56, 0.5); }
-@@ -1196,6 +1196,9 @@
-   width: 15em;
-   min-width: 5px; }
- 
-+.grouped-window-list-box {
-+  spacing: 12px; }
-+
- .grouped-window-list-item-box {
-   text-align: left;
-   font-weight: bold;
-@@ -1203,6 +1206,8 @@
-   padding-top: 0;
-   padding-left: 8px;
-   padding-right: 8px;
-+  margin-left: 2px;
-+  margin-right: 2px;
-   transition-duration: 100;
-   color: rgba(48, 48, 48, 0.8); }
-   .grouped-window-list-item-box.top, .grouped-window-list-item-box.bottom {
-@@ -1402,14 +1407,19 @@
+@@ -1402,14 +1402,19 @@
    .workspace-button.vertical {
      height: 2em; }
    .workspace-button:outlined {

@@ -1,0 +1,29 @@
+# GNOME Terminal colours for Mint-Y-Paper: gruvbox light on the blog's surfaces.
+# Loaded into a profile by install-gnome-terminal.sh; fonts and behaviour are
+# cloned from your default profile, only the colours come from here.
+#
+#   background    #edebe5  the theme's content surfaces (blog --color-bg-subtle)
+#   foreground    #3c3836  ink (gruvbox dark1)
+#   cursor        #427b58  the accent, with paper on top
+#   selection     #427b58 / #f2f0ea, the desktop's selection colours
+#   0  black      #e7e5df  the blog's code background (6% ink on paper)
+#   7  white      #6d6156  the blog's muted text
+#   8  br. black  #928374  gruvbox gray, the blog's comment colour
+#   15 br. white  #3c3836  ink
+#   1-6 normal    gruvbox light's faded set, the blog's syntax colours
+#   9-14 bright   gruvbox's neutral set, lighter and warmer
+[/]
+use-theme-colors=false
+use-theme-background=false
+use-theme-transparency=false
+background-color='#edebe5'
+foreground-color='#3c3836'
+bold-color-same-as-fg=true
+cursor-colors-set=true
+cursor-background-color='#427b58'
+cursor-foreground-color='#f2f0ea'
+highlight-colors-set=true
+highlight-background-color='#427b58'
+highlight-foreground-color='#f2f0ea'
+palette=['#e7e5df', '#9d0006', '#79740e', '#b57614', '#076678', '#8f3f71', '#427b58', '#6d6156', '#928374', '#cc241d', '#98971a', '#d79921', '#458588', '#b16286', '#689d6a', '#3c3836']
+visible-name='Mint-Y-Paper'

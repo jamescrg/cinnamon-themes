@@ -1,19 +1,24 @@
 # Custom Mint-Y themes
 
 Each `~/.themes/<Ancestor>-Custom` is generated: a fresh copy of
-`/usr/share/themes/<Ancestor>` with `cinnamon.patch` applied to
-`cinnamon/cinnamon.css` and `Name=` adjusted in `index.theme`.
-Do not edit the generated themes by hand; edit `cinnamon.patch` and run
-`./rebuild.sh --force`.
+`/usr/share/themes/<Ancestor>` with the shared steps from `steps/` applied
+and `Name=` adjusted in `index.theme`.
+Do not edit the generated themes by hand; edit the steps or the per-theme
+files and run `./rebuild.sh --force`.
 
-* `themes.conf` – which stock themes to derive from, one `<ancestor> [<name>]`
-  per line; the name defaults to `<ancestor>-Custom`
-* `cinnamon.patch` – darker panel (#c3c3c6), grouped-window-list spacing, and
-  the current workspace filled with the accent in the panel workspace switcher.
-  The patch is shared, so it writes the accent as `@ACCENT@` / `@ACCENT_HOVER@`;
-  `rebuild.sh` fills them from each theme's recoloured accent (hover is 85%)
-* `common.sed` – colour substitutions applied to every theme (darkens the
-  light grey surfaces by 16 points), run before the per-theme file
+* `themes.conf` – which stock themes to derive from, one
+  `<ancestor> [<name>|-] [<steps>]` per line; the name defaults to
+  `<ancestor>-Custom`, the steps to `panel,spacing,surfaces`
+* `steps/` – the shared changes, each a `<step>.patch` (applied to the theme
+  tree) or `<step>.sed` (applied to every stylesheet and SVG):
+  `panel` darkens the Cinnamon panel (#c3c3c6) and fills the current workspace
+  with the accent in the panel workspace switcher, `spacing` spaces out the
+  grouped window list, `surfaces` shifts the light greys and moves content
+  areas to stone-100.
+  Dark themes only take `spacing`; the other two assume light Mint-Y colours.
+  `panel.patch` is shared, so it writes the accent as `@ACCENT@` /
+  `@ACCENT_HOVER@`; `rebuild.sh` fills them from each theme's recoloured
+  accent (hover is 85%)
 * `<name>.sed` – optional per-theme colour substitutions applied to every
   stylesheet, rc file and SVG in the theme (Cinnamon, GTK 2/3/4, libadwaita,
   xfwm4, openbox) after the patch. `Mint-Y-Purple-Custom.sed` darkens the
@@ -22,7 +27,30 @@ Do not edit the generated themes by hand; edit `cinnamon.patch` and run
 * `<name>.recolor` – optional `"#from #to"` pairs; `recolor-png.py` (Pillow)
   remaps accent-hued pixels in every PNG asset (checkboxes, radios, switches,
   window buttons, thumbnails) so the image assets match the CSS
+  A third word `exact` on a line selects exact mode, for accents too grey for
+  hue matching: pixels that are a blend of the source with any neutral grey
+  become the same blend of the target, and a neutral source retints neutral
+  pixels of its lightness
 * `recolor-png.py` – the PNG recolouring tool; needs `python3-pil`
+* `paper-palette.py` – generates `Mint-Y-Paper.sed` and `Mint-Y-Paper.recolor`
+  from the built `Mint-Y-Grey-Custom` tree: the palette of jamescraig.dev
+  (paper #f2f0ea, ink #3c3836, faded-aqua accent #427b58, tan borders). Every
+  grey keeps its lightness and takes the paper's warmth; Mint-Y-Grey's grey
+  accent ramp (which mirrors stock Mint-Y's green ramp shade for shade) becomes
+  the aqua ramp. `--strength` sets how tan the greys get (0.6 by default, 1.0 is
+  gruvbox's own chroma), `--chrome-strength` the same for title bars, header
+  bars, sidebars and the Cinnamon menu (0.45), `--panel-strength` for the
+  Cinnamon panel alone (0.3), and `--base` the content surfaces (text views, lists, Nemo's file
+  area; the blog's subtle shade #edebe5 by default, #f2f0ea is its paper).
+  Regenerate after changing `surfaces.sed`, a dial or the stock theme, then
+  `./rebuild.sh`:
+
+      ./paper-palette.py ../Mint-Y-Grey-Custom --sed Mint-Y-Paper.sed --recolor Mint-Y-Paper.recolor
+
+* `terminal/` – the matching GNOME Terminal colours (`mint-y-paper.dconf`,
+  gruvbox light on the theme's surfaces) and `install-gnome-terminal.sh`, which
+  creates or refreshes a "Mint-Y-Paper" profile cloned from your default one
+  without changing the default
 
 Generated themes are complete: select the same name under both Desktop and
 Applications in System Settings > Themes.

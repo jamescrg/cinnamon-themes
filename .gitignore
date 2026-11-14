@@ -4,3 +4,4 @@ build/
 previous/
 rebuild.log
 backup-*.tar.gz
+__pycache__/

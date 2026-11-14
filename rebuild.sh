@@ -1,8 +1,8 @@
 #!/bin/bash
 # Rebuild ~/.themes/<Ancestor>-Custom from /usr/share/themes/<Ancestor> plus
-# cinnamon.patch, for every ancestor listed in themes.conf.
+# the shared steps in steps/, for every ancestor listed in themes.conf.
 #
-#   rebuild.sh                 rebuild themes whose ancestor/patch changed
+#   rebuild.sh                 rebuild themes whose ancestor/steps changed
 #   rebuild.sh --force         rebuild everything
 #   rebuild.sh --check         report what is out of date, change nothing
 #   rebuild.sh --settle        wait for /usr/share/themes to stop changing first
@@ -17,7 +17,8 @@ set -euo pipefail
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 THEMES_DIR="$(dirname "$HERE")"
 STOCK=/usr/share/themes
-PATCH="$HERE/cinnamon.patch"
+STEPS_DIR="$HERE/steps"          # shared steps: <step>.patch or <step>.sed
+DEFAULT_STEPS="panel,spacing,surfaces"
 CONF="$HERE/themes.conf"
 STATE="$HERE/state"
 LOG="$HERE/rebuild.log"
@@ -39,17 +40,27 @@ done
 
 log() { printf '%s %s\n' "$(date '+%F %T')" "$*" | tee -a "$LOG" >&2; }
 notify() { command -v notify-send >/dev/null 2>&1 && notify-send -u "${3:-normal}" -a "Custom themes" "$1" "$2" 2>/dev/null || true; }
-# themes.conf lines are "<ancestor> [<output name>]"; the name defaults to <ancestor>-Custom.
-entries() { grep -Ev '^[[:space:]]*(#|$)' "$CONF" | tr -d '\r' | awk -v s="$SUFFIX" '{ print $1, ($2 != "" ? $2 : $1 s) }'; }
+# themes.conf lines are "<ancestor> [<output name>|-] [<steps>]": the name
+# defaults to <ancestor>-Custom, steps to $DEFAULT_STEPS (comma-separated).
+entries() {
+  grep -Ev '^[[:space:]]*(#|$)' "$CONF" | tr -d '\r' \
+    | awk -v s="$SUFFIX" -v d="$DEFAULT_STEPS" '{ n = ($2 != "" && $2 != "-") ? $2 : $1 s; print $1, n, ($3 != "" ? $3 : d) }'
+}
 ancestors() { entries | awk '{ print $1 }'; }
+step_file() { for f in "$STEPS_DIR/$1.patch" "$STEPS_DIR/$1.sed"; do [ -f "$f" ] && { echo "$f"; return 0; }; done; return 1; }
+apply_sed() {
+  find "$1" -type f \( -name '*.css' -o -name '*.svg' -o -name '*.xml' -o -name '*.rc' -o -name gtkrc -o -name themerc \) \
+    -exec sed -i -f "$2" {} +
+}
 tree_hash() { (cd "$1" && find . -type f -print0 | sort -z | xargs -0 sha256sum) | sha256sum | cut -d' ' -f1; }
 # Hash contents only: "sha256sum FILE" prints the path beside the hash, which
 # would make the stamp depend on how this script was invoked (./rebuild.sh vs
 # an absolute path), forcing a needless full rebuild every time.
 file_hash() { sha256sum < "$1" | cut -d' ' -f1; }
-stamp() {
-  { tree_hash "$STOCK/$1"; file_hash "$PATCH"; file_hash "$0"; file_hash "$HERE/recolor-png.py"
-    for f in "$HERE/common.sed" "$HERE/$2.sed" "$HERE/$2.recolor"; do [ -f "$f" ] && file_hash "$f"; done; true
+stamp() {  # ancestor name steps
+  { tree_hash "$STOCK/$1"; file_hash "$0"; file_hash "$HERE/recolor-png.py"
+    for st in ${3//,/ }; do f=$(step_file "$st") && file_hash "$f"; done
+    for f in "$HERE/$2.sed" "$HERE/$2.recolor"; do [ -f "$f" ] && file_hash "$f"; done; true
   } | sha256sum | cut -d' ' -f1
 }
 # "#rrggbb" scaled to 85% brightness, for hover states.
@@ -93,7 +104,7 @@ UNIT
 if [ "$INSTALL" = 1 ]; then install_units; exit 0; fi
 
 [ -f "$CONF" ] || { log "missing $CONF"; exit 1; }
-[ -f "$PATCH" ] || { log "missing $PATCH"; exit 1; }
+[ -d "$STEPS_DIR" ] || { log "missing $STEPS_DIR"; exit 1; }
 
 if [ "$SETTLE" = 1 ]; then
   # An apt upgrade replaces files one by one; wait until nothing changes for 10s.
@@ -108,12 +119,12 @@ fi
 
 mkdir -p "$STATE" "$HERE/build" "$HERE/previous"
 rebuilt=() failed=() stale=0
-while read -r A name; do
+while read -r A name steps; do
   src="$STOCK/$A"; dest="$THEMES_DIR/$name"
   if [ ! -d "$src" ]; then
     log "$name: ancestor $src does not exist, skipping"; failed+=("$name"); continue
   fi
-  want=$(stamp "$A" "$name"); have=$(cat "$STATE/$name" 2>/dev/null || echo none)
+  want=$(stamp "$A" "$name" "$steps"); have=$(cat "$STATE/$name" 2>/dev/null || echo none)
   if [ "$want" = "$have" ] && [ "$FORCE" = 0 ] && [ -d "$dest" ]; then
     [ "$CHECK" = 1 ] && echo "$name: up to date"
     continue
@@ -123,36 +134,49 @@ while read -r A name; do
   build="$HERE/build/$name"
   rm -rf "$build"; mkdir -p "$build"
   rsync -a --delete "$src/" "$build/"
-  if ! patch -p1 -F0 --dry-run --no-backup-if-mismatch -d "$build" < "$PATCH" >>"$LOG" 2>&1; then
-    log "$name: cinnamon.patch no longer applies to $src; existing theme left untouched"
-    notify "Custom theme NOT updated" "$name: the stock theme changed and cinnamon.patch needs updating. See $LOG" critical
-    failed+=("$name"); rm -rf "$build"; continue
-  fi
-  patch -p1 -F0 --no-backup-if-mismatch -d "$build" < "$PATCH" >>"$LOG" 2>&1
-  # Colour substitutions apply to every stylesheet, rc file, SVG and XML in the
-  # theme: common.sed for all themes first, then the per-theme file.
-  for sedfile in "$HERE/common.sed" "$HERE/$name.sed"; do
-    [ -f "$sedfile" ] || continue
-    find "$build" -type f \( -name '*.css' -o -name '*.svg' -o -name '*.xml' -o -name '*.rc' -o -name gtkrc -o -name themerc \) \
-      -exec sed -i -f "$sedfile" {} +
-    log "$name: applied colour substitutions from $(basename "$sedfile")"
+  # Shared steps in the order listed for this theme. Patches apply to the
+  # theme tree; sed files apply to every stylesheet, rc file, SVG and XML.
+  for st in ${steps//,/ }; do
+    if ! f=$(step_file "$st"); then
+      log "$name: unknown step '$st' (no $STEPS_DIR/$st.patch or .sed)"; failed+=("$name"); rm -rf "$build"; continue 2
+    fi
+    case "$f" in
+      *.patch)
+        if ! patch -p1 -F0 --dry-run --no-backup-if-mismatch -d "$build" < "$f" >>"$LOG" 2>&1; then
+          log "$name: $st.patch no longer applies to $src; existing theme left untouched"
+          notify "Custom theme NOT updated" "$name: the stock theme changed and $st.patch needs updating. See $LOG" critical
+          failed+=("$name"); rm -rf "$build"; continue 2
+        fi
+        patch -p1 -F0 --no-backup-if-mismatch -d "$build" < "$f" >>"$LOG" 2>&1 ;;
+      *.sed) apply_sed "$build" "$f" ;;
+    esac
+    log "$name: applied step $st"
   done
-  # cinnamon.patch is shared by every theme, so it writes the accent as
-  # @ACCENT@ / @ACCENT_HOVER@. Fill them from the theme's own (recoloured)
-  # accent, taken from the workspace-graph highlight.
-  css="$build/cinnamon/cinnamon.css"
-  accent=$(grep -A1 '\.workspace-graph \.workspace:active {' "$css" | grep -oiE '#[0-9a-f]{6}' | head -1 || true)
-  if [ -z "$accent" ]; then
-    log "$name: could not find the accent colour in $css; existing theme left untouched"
-    notify "Custom theme NOT updated" "$name: no accent colour found for cinnamon.patch placeholders. See $LOG" critical
-    failed+=("$name"); rm -rf "$build"; continue
+  # Per-theme colour substitutions, after the shared steps.
+  if [ -f "$HERE/$name.sed" ]; then
+    apply_sed "$build" "$HERE/$name.sed"
+    log "$name: applied colour substitutions from $name.sed"
   fi
-  sed -i "s/@ACCENT_HOVER@/$(darken "$accent")/g; s/@ACCENT@/$accent/g" "$css"
+  # steps/panel.patch is shared by every theme that takes it, so it writes the
+  # accent as @ACCENT@ / @ACCENT_HOVER@. Fill them from the theme's own
+  # (recoloured) accent, taken from the workspace-graph highlight.
+  css="$build/cinnamon/cinnamon.css"
+  if grep -q '@ACCENT@' "$css"; then
+    accent=$(grep -A1 '\.workspace-graph \.workspace:active {' "$css" | grep -oiE '#[0-9a-f]{6}' | head -1 || true)
+    if [ -z "$accent" ]; then
+      log "$name: could not find the accent colour in $css; existing theme left untouched"
+      notify "Custom theme NOT updated" "$name: no accent colour found for the panel step's placeholders. See $LOG" critical
+      failed+=("$name"); rm -rf "$build"; continue
+    fi
+    sed -i "s/@ACCENT_HOVER@/$(darken "$accent")/g; s/@ACCENT@/$accent/g" "$css"
+  fi
   if [ -f "$HERE/$name.recolor" ]; then
     # PNG assets (checkboxes, switches, thumbnails...) get their accent pixels remapped.
+    # Each line is "<from> <to>" (hue mode) or "<from> <to> exact" (exact mode).
     mapargs=()
-    while read -r from to; do
-      [[ "$from" =~ ^#[0-9a-fA-F]{6}$ && "$to" =~ ^#[0-9a-fA-F]{6}$ ]] && mapargs+=(-m "$from $to")
+    while read -r from to mode; do
+      [[ "$from" =~ ^#[0-9a-fA-F]{6}$ && "$to" =~ ^#[0-9a-fA-F]{6}$ ]] || continue
+      case "$mode" in exact) mapargs+=(-e "$from $to") ;; *) mapargs+=(-m "$from $to") ;; esac
     done < <(grep -Ev '^[[:space:]]*(#[^0-9a-fA-F]|#$|$)' "$HERE/$name.recolor")
     if [ ${#mapargs[@]} -gt 0 ]; then
       find "$build" -type f -name '*.png' -print0 | xargs -0 python3 "$HERE/recolor-png.py" "${mapargs[@]}" >>"$LOG" 2>&1
